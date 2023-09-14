@@ -1,0 +1,7 @@
+Pillow
+tensorflow
+numpy
+tqdm
+jupyter
+scipy
+tflite-support
