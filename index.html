@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8"/>
         <title>Text Detector</title>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
             integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     </head>
     <body>
-        <main>
+        <!-- <main> -->
             <div class="container mt-5">
                 <div class="row">
                     <div class="col-12">
@@ -35,52 +38,67 @@
                         <img id="selected-image" class="ml-3" src="" />
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h2 class="ml-3">Resultado</h2>
+                        <label id="result-label" class="ml-3" src="" />
+                    </div>
+                </div>
             </div>
-        </main>
-    </body>
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js">
-
-    </script>
-    <script>
-        // localStorage.setItem("model", "./models/cat_dogs_model/")
-
-        async function loadModel() {
-            console.log("model loading..");
-            
-            // clear the model variable
-            let model = undefined;
-
-            reader = new FileReader('./models/cat_dogs_model/model.json')
-
-            model = await tf.loadLayersModel(reader);
-  
-            $(".progress-bar").hide();
-        }
-
-        loadModel();
-
-        // JavaScript
-        // webcamElement
-        $("#image-selector").change(function () {
-            let reader = new FileReader();
-            reader.onload = function () {
-                let dataURL = reader.result;
-                $("#selected-image").attr("src", dataURL);
-                $("#prediction-list").empty();
-            }
-            let file = $("#image-selector").prop("files")[0];
-            reader.readAsDataURL(file);
-        });
+        <!-- </main> -->
+        <script>
+            async function loadModel() {                
+                const filepath = "./models/cat_dogs_model_js/model.json"
     
-        $("#predict-button").click(async function(){
-            console.log("on click button");
-            let image = $("#selected-image").get(0);
-            let tensor = tf.browser.fromPixels(image);
-            tensor = tf.cast(tensor, 'float32');
-            console.log(tensor.shape);
-            const preds = await model.predict(tensor);
-        });
-    </script>
+                console.log("model loading...");
+    
+                model = await tf.loadLayersModel(filepath);
+      
+                $(".progress-bar").hide();
+
+                return model
+            }
+            
+            console.log("Before loading model")
+            model = loadModel();
+    
+            // JavaScript
+            // webcamElement
+            $("#image-selector").change(function () {
+                $("#result-label").text("")
+
+                let reader = new FileReader();
+                reader.onload = function () {
+                    let dataURL = reader.result;
+                    $("#selected-image").attr("src", dataURL);
+                    $("#prediction-list").empty();
+                }
+                let file = $("#image-selector").prop("files")[0];
+                reader.readAsDataURL(file);
+            });
+        
+            $("#predict-button").click(async function(){
+                let image = $("#selected-image").get(0);
+                let tensor = tf.browser.fromPixels(image);
+                tensor = tensor.resizeNearestNeighbor([256, 256])
+                tensor = tf.expandDims(tensor, axis=0)
+                tensor = tf.cast(tensor, 'float32');
+                tensor = tensor.div(tf.scalar(255))
+                const preds = await model.predict(tensor);
+
+                console.log(preds.dataSync()[0])    
+
+                const proba = preds.dataSync()[0]
+
+                if (proba>0.5){
+                    console.log("Es un MISHI")
+                    $("#result-label").text("Es un MISHI!! | probabilidad de: "+proba)
+                }else{
+                    console.log("No es un MISHI")
+                    $("#result-label").text("No es un MISHI | probabilidad de: "+proba)
+                } 
+            });
+        </script>
+    </body>
 </html>
 
